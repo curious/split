@@ -23,6 +23,10 @@ module Split
         @session[:split].keys
       end
 
+      def experiments
+        @session[:split]
+      end
+
     end
   end
 end

@@ -34,6 +34,10 @@ module Split
         Split.redis.hkeys(redis_key)
       end
 
+      def experiments
+        Split.redis.hgetall(redis_key)
+      end
+
       def self.with_config(options={})
         self.config.merge!(options)
         self

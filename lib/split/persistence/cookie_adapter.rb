@@ -26,6 +26,10 @@ module Split
         hash.keys
       end
 
+      def experiments
+        hash
+      end
+
       private
 
       def set_cookie(value)
