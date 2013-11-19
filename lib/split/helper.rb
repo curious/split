@@ -106,6 +106,11 @@ module Split
       @ab_user ||= Split::Persistence.adapter.new(self)
     end
 
+    # you can use this if the user has changed during the request (e.g. during login or logout)
+    def reset_ab_user
+      @ab_user = Split::Persistence.adapter.new(self)
+    end
+
     def exclude_visitor?
       instance_eval(&Split.configuration.ignore_filter)
     end

@@ -30,6 +30,11 @@ module Split
         hash
       end
 
+      # This is a no-op, since you only have access to one set of cookies.
+      # Just included for consistency with the redis adapter
+      def combine(other_identity)
+      end
+
       private
 
       def set_cookie(value)

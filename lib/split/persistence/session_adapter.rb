@@ -27,6 +27,11 @@ module Split
         @session[:split]
       end
 
+      # This is a no-op, since you only have access to one session.
+      # Just included for consistency with the redis adapter
+      def combine(other_identity)
+      end
+
     end
   end
 end

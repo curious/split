@@ -77,5 +77,41 @@ describe Split::Persistence::RedisAdapter do
       end
     end
 
+    describe "#combine" do
+      let(:other) { Split::Persistence::RedisAdapter.new( double(:lookup => 'other') ) }
+
+      it "should update the current identity with the other key/values" do
+        other["my_key"] = "current_value"
+        subject.combine('other')
+        subject["my_key"].should == "current_value"
+      end
+
+      it "should preserve existing key/values in the current identity" do
+        subject["my_key"] = "current_value"
+        other["my_key"] = "other_value"
+        subject.combine('other')
+        subject["my_key"].should == "current_value"
+      end
+
+      it "should add existing key/values to the other identity" do
+        subject["my_key"] = "current_value"
+        subject.combine('other')
+        other["my_key"].should == "current_value"
+      end
+
+      it "should overwrite key/values in the other identity" do
+        subject["my_key"] = "current_value"
+        other["my_key"] = "other_value"
+        subject.combine('other')
+        other["my_key"].should == "current_value"
+      end
+
+      it "should work even if the other identity has no keys" do
+        subject["my_key"] = "current_value"
+        subject.combine('other')
+        subject["my_key"].should == "current_value"
+      end
+    end
+
   end
 end

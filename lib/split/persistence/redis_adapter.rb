@@ -12,7 +12,7 @@ module Split
           else
             key_frag = context.send(lookup_by)
           end
-          @redis_key = "#{self.class.config[:namespace]}:#{key_frag}"
+          @redis_key = redis_key_from_key_frag(key_frag)
         else
           raise "Please configure lookup_by"
         end
@@ -38,6 +38,19 @@ module Split
         Split.redis.hgetall(redis_key)
       end
 
+      # Combine the current identity with a different identity (useful for when a user signs up and their id changes).
+      # Note that this will preserve any existing values in the current identity, and will fully overwrite the values
+      # in the other_identity, so that at the end the two match, with the current identity getting preference.
+      def combine(other_identity)
+        other_key = redis_key_from_key_frag(other_identity)
+        other_hash = Split.redis.hgetall(other_key)
+        # use hsetnx so that we don't clobber existing values
+        other_hash.each { |test_name, test_value| Split.redis.hsetnx(redis_key, test_name, test_value) }
+        # now rewrite the other_identity's tests to be identical to the current_identities one.
+        Split.redis.del(other_key)
+        Split.redis.hmset(other_key, self.experiments.to_a.flatten)
+      end
+
       def self.with_config(options={})
         self.config.merge!(options)
         self
@@ -49,6 +62,12 @@ module Split
 
       def self.reset_config!
         @config = DEFAULT_CONFIG.dup
+      end
+
+      private
+
+      def redis_key_from_key_frag(key_frag)
+        "#{self.class.config[:namespace]}:#{key_frag}"
       end
 
     end

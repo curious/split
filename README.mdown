@@ -244,6 +244,16 @@ Options:
 * `lookup_by`: method to invoke per request for uniquely identifying ab_users (mandatory configuration)
 * `namespace`: separate namespace to store these persisted values (default "persistence")
 
+If you have a different id logged-in and logged-out, you might want to combine them after login, like so:
+```ruby
+def after_login
+  reset_ab_user # make sure we've got the logged-in user
+  ab_user.combine(logged_out_id)
+  # now the logged-in and logged-out ids have identical test sets (with the logged-in user's tests taking precedence
+  # in case of conflict
+end
+```
+
 #### Custom Adapter
 
 Your custom adapter needs to implement the same API as existing adapters.
