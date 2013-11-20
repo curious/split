@@ -77,6 +77,13 @@ describe Split::Persistence::RedisAdapter do
       end
     end
 
+    describe "experiments" do
+      it "should return a hash of the user's stored test name/value pairs" do
+        subject["my_key"] = "my_value"
+        subject.experiments.should == { "my_key" => "my_value" }
+      end
+    end
+
     describe "#combine" do
       let(:other) { Split::Persistence::RedisAdapter.new( double(:lookup => 'other') ) }
 
@@ -106,10 +113,21 @@ describe Split::Persistence::RedisAdapter do
         other["my_key"].should == "current_value"
       end
 
-      it "should work even if the other identity has no keys" do
+      it "should work when the current identity has no keys" do
+        other["my_key"] = "current_value"
+        subject.combine('other')
+        subject["my_key"].should == "current_value"
+      end
+
+      it "should work when the other identity has no keys" do
         subject["my_key"] = "current_value"
         subject.combine('other')
         subject["my_key"].should == "current_value"
+      end
+
+      it "should work when neither identity has keys" do
+        subject.combine('other')
+        subject.experiments.should == {}
       end
     end
 

@@ -48,7 +48,7 @@ module Split
         other_hash.each { |test_name, test_value| Split.redis.hsetnx(redis_key, test_name, test_value) }
         # now rewrite the other_identity's tests to be identical to the current_identities one.
         Split.redis.del(other_key)
-        Split.redis.hmset(other_key, self.experiments.to_a.flatten)
+        Split.redis.hmset(other_key, self.experiments.to_a.flatten) unless self.experiments.empty?
       end
 
       def self.with_config(options={})
