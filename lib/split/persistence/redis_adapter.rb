@@ -19,36 +19,38 @@ module Split
       end
 
       def [](field)
-        Split.redis.hget(redis_key, field)
+        redis_failover { |redis| redis.hget(redis_key, field) }
       end
 
       def []=(field, value)
-        Split.redis.hset(redis_key, field, value)
+        redis_failover(value) { |redis| redis.hset(redis_key, field, value) }
       end
 
       def delete(field)
-        Split.redis.hdel(redis_key, field)
+        redis_failover { |redis| redis.hdel(redis_key, field) }
       end
 
       def keys
-        Split.redis.hkeys(redis_key)
+        redis_failover([]) { |redis| redis.hkeys(redis_key) }
       end
 
       def experiments
-        Split.redis.hgetall(redis_key)
+        redis_failover({}) { |redis| redis.hgetall(redis_key) }
       end
 
       # Combine the current identity with a different identity (useful for when a user signs up and their id changes).
       # Note that this will preserve any existing values in the current identity, and will fully overwrite the values
       # in the other_identity, so that at the end the two match, with the current identity getting preference.
       def combine(other_identity)
-        other_key = redis_key_from_key_frag(other_identity)
-        other_hash = Split.redis.hgetall(other_key)
-        # use hsetnx so that we don't clobber existing values
-        other_hash.each { |test_name, test_value| Split.redis.hsetnx(redis_key, test_name, test_value) }
-        # now rewrite the other_identity's tests to be identical to the current_identities one.
-        Split.redis.del(other_key)
-        Split.redis.hmset(other_key, self.experiments.to_a.flatten) unless self.experiments.empty?
+        redis_failover do |redis|
+          other_key = redis_key_from_key_frag(other_identity)
+          other_hash = redis.hgetall(other_key)
+          # use hsetnx so that we don't clobber existing values
+          other_hash.each { |test_name, test_value| redis.hsetnx(redis_key, test_name, test_value) }
+          # now rewrite the other_identity's tests to be identical to the current_identities one.
+          redis.del(other_key)
+          redis.hmset(other_key, self.experiments.to_a.flatten) unless self.experiments.empty?
+        end
       end
 
       def self.with_config(options={})
@@ -70,6 +72,15 @@ module Split
         "#{self.class.config[:namespace]}:#{key_frag}"
       end
 
+      def redis_failover(failover_return = nil, &block)
+        begin
+          yield(Split.redis)
+        rescue => e
+          raise(e) unless Split.configuration.db_failover
+          Split.configuration.db_failover_on_db_error.call(e)
+          failover_return
+        end
+      end
     end
   end
 end
